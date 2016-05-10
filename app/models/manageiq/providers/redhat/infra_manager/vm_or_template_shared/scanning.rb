@@ -70,30 +70,38 @@ module ManageIQ::Providers::Redhat::InfraManager::VmOrTemplateShared::Scanning
     _log.debug "srs.length = #{srs.length}"
 
     miq_servers = srs.select do |svr|
-      svr.vm_scan_storage_affinity? ? all_storage_server_ids.detect { |id| id == svr.id } : storage_server_ids.empty?
+      svr.vm_scan_storage_affinity? ? all_storage_server_ids.detect { |id| id == svr.id } 
+      : storage_server_ids.empty?
     end
     _log.debug "miq_servers1.length = #{miq_servers.length}"
 
-    miq_servers.select! do |svr|
-      result = svr.status == "started" && svr.has_zone?(my_zone)
-      # RedHat VMs must be scanned from an EVM server who's host is attached to the same
-      # storage as the VM unless overridden via SmartProxy affinity
-      unless svr.vm_scan_storage_affinity?
-        svr_vm = svr.vm
-        if svr_vm && svr_vm.host
-          missing_storage_ids = storages.collect(&:id) - svr_vm.host.storages.collect(&:id)
-          result &&= missing_storage_ids.empty?
-        else
-          result = false
-        end
-      end
-      result
-    end
+    miq_servers = select_miq_servers(miq_servers)
+
     _log.debug "miq_servers2.length = #{miq_servers.length}"
+
     miq_servers
   end
 
   private
+
+  def select_miq_servers(miq_servers)
+    miq_servers.select do |svr|
+      return server_started_in_my_zone?(srv) if svr.vm_scan_storage_affinity?
+      evm_has_same_starage_as_vm?(svr.vm)
+    end
+  end
+
+  def evm_has_same_starage_as_vm?(svr_vm)
+    # RedHat VMs must be scanned from an EVM server who's host is attached to the same
+    # storage as the VM unless overridden via SmartProxy affinity
+    return unless srv_vm && svr_vm.host
+    missing_storage_ids = storages.collect(&:id) - host.storages.collect(&:id)
+    return missing_storage_ids.empty?
+  end
+
+  def svr_started_in_my_zone?(svr)
+    svr.status == "started" && svr.has_zone?(my_zone)
+  end
 
   def storage2active_proxies(all_proxy_list = nil)
     _log.debug "Enter (RHEVM)"
