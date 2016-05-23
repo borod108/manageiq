@@ -40,8 +40,9 @@ module ManageIQ::Providers::Redhat::InfraManager::VmOrTemplateShared::Scanning
       job = Job.find_by_guid(jobid)
     end
     proxies = []
+    all_proxy_list = storage2proxies
     begin
-      proxies = storage2active_proxies
+      proxies = storage2active_proxies(all_proxy_list)
     rescue => e
       msg = e.message
     end
