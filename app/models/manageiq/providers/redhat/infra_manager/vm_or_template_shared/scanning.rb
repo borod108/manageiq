@@ -58,7 +58,7 @@ module ManageIQ::Providers::Redhat::InfraManager::VmOrTemplateShared::Scanning
     _log.debug "Enter (RHEVM)"
 
     _log.debug "RedHat: storage_id.blank? = #{storage_id.blank?}"
-    return [] if storage_id.blank?
+    raise 'No storage defined for vm' if storage_id.blank?
 
     storage_server_ids = storages.collect { |s| s.vm_scan_affinity.collect(&:id) }.reject(&:blank?)
     _log.debug "storage_server_ids.length = #{storage_server_ids.length}"
