@@ -7,7 +7,6 @@ module EmsRefresh
 
       def refresh
         preprocess_targets
-
         @targets_by_ems_id.each do |ems_id, targets|
           # Get the ems object
           ems = @ems_by_ems_id[ems_id]
@@ -18,7 +17,7 @@ module EmsRefresh
             log_ems_target = format_ems_for_logging(ems)
             _log.info "#{log_ems_target} Refreshing targets for EMS..."
             targets.each { |t| _log.info "#{log_ems_target}   #{t.class} [#{t.name}] id [#{t.id}]" }
-            _, timings = Benchmark.realtime_block(:ems_refresh) { refresh_targets_for_ems(ems, targets) }
+            _, timings = Benchmark.realtime_block(:ems_refresh) { refresh_targets_for_ems(ems, targets, { escalate_to_full_on_error: true } ) }
             _log.info "#{log_ems_target} Refreshing targets for EMS...Complete - Timings #{timings.inspect}"
           rescue => e
             raise if EmsRefresh.debug_failures
@@ -45,33 +44,47 @@ module EmsRefresh
         _log.info "Refreshing all targets...Complete"
       end
 
+      def escalate_to_full_refresh(ems_id)
+        @targets_by_ems_id[ems_id].clear << @ems_by_ems_id[ems_id]
+      end
+
+      def doing_full_refresh?(targets)
+        targets.any? { |t| t.kind_of?(ExtManagementSystem) }
+      end
+
       def preprocess_targets
         @full_refresh_threshold = options[:full_refresh_threshold] || 10
-
         # See if any should be escalated to a full refresh
         @targets_by_ems_id.each do |ems_id, targets|
           ems = @ems_by_ems_id[ems_id]
-          ems_in_list = targets.any? { |t| t.kind_of?(ExtManagementSystem) }
-
-          if ems_in_list
+          if doing_full_refresh?(targets)
             _log.info "Defaulting to full refresh for EMS: [#{ems.name}], id: [#{ems.id}]." if targets.length > 1
-            targets.clear << ems
+            escalate_to_full_refresh(ems_id)
           elsif targets.length >= @full_refresh_threshold
             _log.info "Escalating to full refresh for EMS: [#{ems.name}], id: [#{ems.id}]."
-            targets.clear << ems
+            escalate_to_full_refresh(ems_id)
           end
         end
       end
 
-      def refresh_targets_for_ems(ems, targets)
+      def refresh_targets_for_ems(ems, targets, options = {})
         # handle a 3-part inventory refresh process
         # 1. collect inventory
         # 2. parse inventory
         # 3. save inventory
         log_header = format_ems_for_logging(ems)
-
         targets_with_inventory, _ = Benchmark.realtime_block(:collect_inventory_for_targets) do
-          collect_inventory_for_targets(ems, targets)
+          begin
+            collect_inventory_for_targets(ems, targets)
+          rescue Ovirt::MissingResourceError => e
+            raise e unless options[:escalate_to_full_on_error]
+            unless doing_full_refresh?(targets)
+              _log.info "Escalating to full refresh for EMS: [#{ems.name}], id: [#{ems.id}].
+                       due to error while trying to refresh targets"
+              escalate_to_full_refresh(ems.id)
+              return refresh_targets_for_ems(ems, @targets_by_ems_id[ems.id])
+            end
+          end
         end
 
         until targets_with_inventory.empty?
