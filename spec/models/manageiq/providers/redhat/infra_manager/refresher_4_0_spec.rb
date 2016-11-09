@@ -1,8 +1,7 @@
 describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
   before(:each) do
     guid, server, zone = EvmSpecHelper.create_guid_miq_server_zone
-    @ems = FactoryGirl.create(:ems_redhat, :zone => zone, :hostname => "localhost", :ipaddress => "localhost",
-                              :port => 8443)
+    @ems = FactoryGirl.create(:ems_redhat, :zone => zone, :hostname => "localhost", :ipaddress => "localhost", :port => 8443)
     @ems.update_authentication(:default => {:userid => "admin@internal", :password => "123456"})
     allow(@ems).to receive(:supported_api_versions).and_return([3, 4])
   end
@@ -11,8 +10,8 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
     expect(described_class.ems_type).to eq(:rhevm)
   end
 
-  it "will perform a full refresh on v4.1" do
-    VCR.use_cassette("#{described_class.name.underscore}_4_1", :allow_unused_http_interactions => true) do
+  it "will perform a full refresh on v4.0" do
+    VCR.use_cassette("manageiq/providers/redhat/infra_manager/refresher_4_1", :allow_unused_http_interactions => true) do
       EmsRefresh.refresh(@ems)
     end
     @ems.reload
@@ -20,12 +19,12 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
     assert_table_counts
     assert_ems
     assert_specific_cluster
-    assert_specific_storage
-    # assert_specific_host
-    # assert_specific_vm_powered_on
-    # assert_specific_vm_powered_off
-    # assert_specific_template
-    # assert_relationship_tree
+    #assert_specific_storage
+    #assert_specific_host
+    #assert_specific_vm_powered_on
+    #assert_specific_vm_powered_off
+    #assert_specific_template
+    #assert_relationship_tree
   end
 
   def assert_table_counts
@@ -113,32 +112,49 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
   end
 
   def assert_specific_storage
-    @storage = Storage.find_by_name("data1")
+    @storage = Storage.find_by_name("NetApp01Lun2")
     expect(@storage).to have_attributes(
-      :ems_ref                       => "/api/storagedomains/27a3bcce-c4d0-4bce-afe9-1d669d5a9d02",
-      :ems_ref_obj                   => "/api/storagedomains/27a3bcce-c4d0-4bce-afe9-1d669d5a9d02",
-      :name                          => "data1",
-      :store_type                    => "NFS",
-      :total_space                   => 53687091200,
-      :free_space                    => 49392123904,
+      :ems_ref                       => "/api/storagedomains/6284e934-9f11-486a-b9d8-aaacfa4f226f",
+      :ems_ref_obj                   => "/api/storagedomains/6284e934-9f11-486a-b9d8-aaacfa4f226f",
+      :name                          => "NetApp01Lun2",
+      :store_type                    => "ISCSI",
+      :total_space                   => 106300440576,
+      :free_space                    => 57982058496,
       :uncommitted                   => 36507222016,
       :multiplehostaccess            => 1, # TODO: Should this be a boolean column?
-      :location                      => "spider.eng.lab.tlv.redhat.com:/vol/vol_bodnopoz/data1",
+      :location                      => "360a980005034442f525a716549583947",
       :directory_hierarchy_supported => nil,
       :thin_provisioning_supported   => nil,
       :raw_disk_mappings_supported   => nil
     )
-    @storage2 = Storage.find_by_name("data2")
+
+    @storage2 = Storage.find_by_name("RHEVM31-1")
     expect(@storage2).to have_attributes(
-      :ems_ref                       => "/api/storagedomains/4672fe17-c260-4ecc-aab0-b535f4d0dbeb",
-      :ems_ref_obj                   => "/api/storagedomains/4672fe17-c260-4ecc-aab0-b535f4d0dbeb",
-      :name                          => "data2",
-      :store_type                    => "NFS",
-      :total_space                   => 53687091200,
-      :free_space                    => 49392123904,
-      :uncommitted                   => 49392123904,
+      :ems_ref                       => "/api/storagedomains/d0a7d751-46bc-495a-a312-e5d010059f96",
+      :ems_ref_obj                   => "/api/storagedomains/d0a7d751-46bc-495a-a312-e5d010059f96",
+      :name                          => "RHEVM31-1",
+      :store_type                    => "ISCSI",
+      :total_space                   => 273804165120,
+      :free_space                    => 137438953472,
+      :uncommitted                   => 45097156608,
       :multiplehostaccess            => 1, # TODO: Should this be a boolean column?
-      :location                      => "spider.eng.lab.tlv.redhat.com:/vol/vol_bodnopoz/data2",
+      :location                      => nil,
+      :directory_hierarchy_supported => nil,
+      :thin_provisioning_supported   => nil,
+      :raw_disk_mappings_supported   => nil
+    )
+
+    @storage3 = Storage.find_by_name("RHEVM31-gluster")
+    expect(@storage3).to have_attributes(
+      :ems_ref                       => "/api/storagedomains/efbe372b-7634-49f0-901e-0c05d526181f",
+      :ems_ref_obj                   => "/api/storagedomains/efbe372b-7634-49f0-901e-0c05d526181f",
+      :name                          => "RHEVM31-gluster",
+      :store_type                    => "GLUSTERFS",
+      :total_space                   => 20_401_094_656,
+      :free_space                    => 16_106_127_360,
+      :uncommitted                   => 19_327_352_832,
+      :multiplehostaccess            => 1, # TODO: Should this be a boolean column?
+      :location                      => "example.gluster.server.com:/gv0",
       :directory_hierarchy_supported => nil,
       :thin_provisioning_supported   => nil,
       :raw_disk_mappings_supported   => nil
