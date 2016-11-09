@@ -215,6 +215,10 @@ module ManageIQ::Providers::Redhat::InfraManager::ApiIntegration
     connection.close
   end
 
+  def highest_supported_api_version
+    supported_api_versions.sort.last
+  end
+
   class_methods do
     def api3_supported_features
       []
