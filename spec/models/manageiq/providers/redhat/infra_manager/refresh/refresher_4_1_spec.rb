@@ -12,7 +12,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
   end
 
   it "will perform a full refresh on v4.1" do
-    VCR.use_cassette("#{described_class.name.underscore}_4_1", :allow_unused_http_interactions => true) do
+    VCR.use_cassette("#{described_class.name.underscore}_4_1", :allow_unused_http_interactions => true, :allow_playback_repeats => true, :record => :new_episodes) do
       EmsRefresh.refresh(@ems)
     end
     @ems.reload
@@ -42,12 +42,14 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
     expect(CustomAttribute.count).to eq(0) # TODO: 3.0 spec has values for this
     expect(CustomizationSpec.count).to eq(0)
     expect(Disk.count).to eq(5)
-    expect(GuestDevice.count).to eq(6)
+    expect(GuestDevice.count).to eq(7)
     expect(Hardware.count).to eq(13)
     expect(Lan.count).to eq(3)
     expect(MiqScsiLun.count).to eq(0)
     expect(MiqScsiTarget.count).to eq(0)
-    expect(Network.count).to eq(4)
+    #puts ">>>>>>>>>>>>>>>>>>>>>>>>>>"
+    #puts Network.all.collect{|n| n.inspect }
+    expect(Network.count).to eq(7)
     expect(OperatingSystem.count).to eq(13)
     expect(Snapshot.count).to eq(12)
     expect(Switch.count).to eq(3)
@@ -59,7 +61,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
 
   def assert_ems
     expect(@ems).to have_attributes(
-      :api_version => "4.1.0_master.",
+      :api_version => "4.2.0_master.",
       :uid_ems     => nil
     )
 
@@ -120,7 +122,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
       :name                          => "data1",
       :store_type                    => "NFS",
       :total_space                   => 53687091200,
-      :free_space                    => 48318382080,
+      :free_space                    => 47244640256,
       :uncommitted                   => 36507222016,
       :multiplehostaccess            => 1, # TODO: Should this be a boolean column?
       :location                      => "spider.eng.lab.tlv.redhat.com:/vol/vol_bodnopoz/data1",
@@ -135,7 +137,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
       :name                          => "data2",
       :store_type                    => "NFS",
       :total_space                   => 53687091200,
-      :free_space                    => 48318382080,
+      :free_space                    => 47244640256,
       :uncommitted                   => 49392123904,
       :multiplehostaccess            => 1, # TODO: Should this be a boolean column?
       :location                      => "spider.eng.lab.tlv.redhat.com:/vol/vol_bodnopoz/data2",
@@ -262,7 +264,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
       :power_state           => "on",
       :location              => "3a9401a0-bf3d-4496-8acf-edd3e903511f.ovf",
       :tools_status          => nil,
-      :boot_time             => Time.parse("2016-12-19T05:42:06.4100000Z"),
+      :boot_time             => Time.parse("2016-12-28T11:59:55.6020000Z"),
       :standby_action        => nil,
       :connection_state      => "connected",
       :cpu_affinity          => nil,
@@ -287,7 +289,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
     # v.storage  # TODO: Fix bug where duplication location GUIDs could cause the wrong value to appear.
 
     expect(v.operating_system).to have_attributes(
-      :product_name => "other"
+      :product_name => "Other"
     )
 
     expect(v.custom_attributes.size).to eq(0)
@@ -328,7 +330,7 @@ describe ManageIQ::Providers::Redhat::InfraManager::Refresh::Refresher do
       :filename        => "af578e0e-b222-4754-aefc-879bf37eacec",
       :location        => "0",
       :size            => 6.gigabytes,
-      :size_on_disk    => 1_613_086_720,
+      :size_on_disk    => 2_986_995_712,
       :mode            => "persistent",
       :disk_type       => "thin",
       :start_connected => true
