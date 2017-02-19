@@ -134,7 +134,7 @@ module ManageIQ::Providers::Redhat::InfraManager::ApiIntegration
     server   = options[:hostname] || metrics_hostname || hostname
     username = options[:user] || authentication_userid(:metrics)
     password = options[:pass] || authentication_password(:metrics)
-    database = options[:database]
+    database = options[:database] || history_database_name
 
     {
       :host     => server,
